@@ -15,30 +15,55 @@ const int PORT = 8080;
 const int BUFFER_SIZE = 1024;
 
 int main(int argc, char** argv) {
-  moteus::Controller::DefaultArgProcess(argc, argv);
+	int sockfd;
+	char_buffer[BUFFER_SIZE];
+	sockaddr_in recAdd, sendAdd; // recieve and send address
+	
+	if (sockfd = socket(AF_INET, SOCK_DGRAM, 0) < 0) {
+		std::cerr << "Failed to create socket file descriptor" std::endl;
+		return 1;
+	}
 
-  moteus::Controller c([]() {
-    moteus::Controller::Options options;
-    options.id = 1;
-    return options;
-  }());
+	memset(&recAdd, 0, sizeof(recAdd));
+	memset(&sendAdd, 0, sizeof(sendAdd));
 
-  moteus::PositionMode::Command command;
-  command.position = std::numeric_limits<double>::quiet_NaN();
+	recAdd.sin_family = AF_INET;
+	recAdd.sin_addr.s_addr = INADDR_ANY;
+	recAdd.sin_port = htons(port);
 
-  while (true) {
-    const auto maybe_result = c.SetPosition(command);
-    if (maybe_result) {
-      const auto& v = maybe_result->values;
-      std::cout << "Mode: " << v.mode
-                << " Fault: " << v.fault
-                << "Position: " << v.position
-                << " Velocity: " << v.velocity
-                << "\n";
-    }
-    ::usleep(10000);
-  }
-  return 0;
+	if (bind(sockfd, (const struct sockaddr *)&recAddr, sizeof(recAddr)) < 0) {
+		std::cerr << "Error binding socket fd to server" <<std::endl;
+		close(sockfd);
+		return 1;
+	}
+
+	std::cout << "Second arm is listening ..." <<std::endl;
+
+	moteus::Controller::DefaultArgProcess(argc, argv);
+		
+	moteus::Controller c([]() {
+		moteus::Controller::Options options;
+		options.id = 1;
+		return options;
+	}());
+
+	moteus::PositionMode::Command command;
+	command.position = std::numeric_limits<double>::quiet_NaN();
+
+	while (true) {
+		const auto maybe_result = c.SetPosition(command);
+		if (maybe_result) {
+			const auto& v = maybe_result->values;
+			std::cout << "Mode: " << v.mode
+			<< " Fault: " << v.fault
+			<< "Position: " << v.position
+			<< " Velocity: " << v.velocity
+			<< "\n";
+		}
+		::usleep(10000);
+	}
+
+	return 0;
 }
 
 //TODO: integrate this into main.
