@@ -1,83 +1,75 @@
+#include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <chrono>
+#include <thread>
 #include "moteus.h"
 
 namespace moteus = mjbots::moteus;
 
-void move_to_zero(int argc, char** opt) { 
-	moteus::Controller::DefaultArgProcess(argc, opt);
+double get_position(moteus::Controller c) {
 	try {
-		moteus::Controller c([]() {
-			moteus::Controller::Options options;
-			options.id = 2;
-			return options;
-		}());
 
 		moteus::PositionMode::Command cmd;
-
-		// Start by holding current position gently
-		cmd.position = 0.0;
-		cmd.velocity = 0.0;
-		cmd.maximum_torque = 0.3;
-
-		auto const result = c.SetPosition(cmd);
+		cmd.position = std::numeric_limits<double>::quiet_NaN();
 		
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
-	
-		c.SetStop();
+		const auto res = c.SetPosition(cmd);
+		
+		if (res) {
+			return res->values.position;
+		} else {
+			c.SetStop();
+			std::cerr << "failed to get position" << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
+
 	} catch (const std::exception& e) {
 		std::cerr << "moteus error: " << e.what() << std::endl;
+		std::exit(EXIT_FAILURE);
 	}
+
 }
 
-
-
-void run_cmd_from_pos(int argc, char** opt, double pos) {
-	moteus::Controller::DefaultArgProcess(argc, opt);
+void move_slowly(moteus::Controller c, double c_pos, double t_pos) {
 	try {
-		moteus::Controller c([]() {
-			moteus::Controller::Options options;
-			options.id = 2;
-			return options;
-		}());
-
 		moteus::PositionMode::Command cmd;
 
-		// Start by holding current position gently
-		cmd.position = std::numeric_limits<double>::quiet_NaN();
-		cmd.velocity = 0.0;
-		cmd.velocity_limit = 0.5;
-		cmd.accel_limit  = 5.0;
-		cmd.kp_scale = 0.1;
-		cmd.kd_scale = 0.1;
-		cmd.maximum_torque = 0.1;
+		const double step = 0.01;
+		const int iterations = 10000;
 
-		auto init_pos = c.SetPosition(cmd);
-		double current = init_pos->values.position;
+		for (int i = 0; i < iterations; ++i) {
+			if (c_pos >= t_pos) {
+				std::cout << "Successfully moved to target position" << std::endl;	
+				break;
+			}
 
-		double step = 0.001;
+			c_pos += step;
+			cmd.position = c_pos;
+			cmd.velocity = 0.0;
+			cmd.maximum_torque = 0.2;
 
-		while (std::abs(current - pos) > 1e-4) {
-			if (pos > current)
-				current = std::min(current + step, pos);
-			else
-				current = std::max(current - step, pos);
+			const auto res = c.SetPosition(cmd);
+			if (res) {
+				const auto& v = res->values;
+				std::cout << "Position: " << v.position << std::endl
+						  << "Velocity: " << v.velocity << std::endl;
+			} else {
+				std::cerr << "failed to move slowly to position via iteration" << std::endl;
+				c.SetStop();
+				std::exit(EXIT_FAILURE);
+			}
 
-			cmd.position = current;
-			auto result = c.SetPosition(cmd);
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(20));
 		}
 
 		c.SetStop();
-	} catch (const std::exception& e) {
-		std::cerr << "moteus error: " << e.what() << std::endl;
-	}
+  } catch (const std::exception& e) {
+	std::cerr << "moteus error: " << e.what() << std::endl;
+  }
 }
 
 
-void stop(int argc, char** opt) {
-	moteus::Controller::DefaultArgProcess(argc, opt);
+void fail_stop(int argc, char** opt) {
 	moteus::Controller c([]() {
 			moteus::Controller::Options options;
 			options.id = 2;
@@ -87,6 +79,18 @@ void stop(int argc, char** opt) {
 	c.SetStop();
 }
 
+
 int main(int argc, char** argv) {
-	move_to_zero(argc, argv);	
+	moteus::Controller::DefaultArgProcess(argc, argv);
+		
+	moteus::Controller c([&]() {
+		moteus::Controller::Options options;
+		options.id = 2;
+		return options;
+    }());
+
+	double c_pos = get_position(c);
+	double t_pos = c_pos + 5;
+
+	move_slowly(c, c_pos, t_pos);
 }
