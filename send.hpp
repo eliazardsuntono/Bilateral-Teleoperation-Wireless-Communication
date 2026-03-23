@@ -78,19 +78,3 @@ void fail_stop(int argc, char** opt) {
 
 	c.SetStop();
 }
-
-
-int main(int argc, char** argv) {
-	moteus::Controller::DefaultArgProcess(argc, argv);
-		
-	moteus::Controller c([&]() {
-		moteus::Controller::Options options;
-		options.id = 2;
-		return options;
-    }());
-
-	double c_pos = get_position(c);
-	double t_pos = c_pos + 5;
-
-	move_slowly(c, c_pos, t_pos);
-}

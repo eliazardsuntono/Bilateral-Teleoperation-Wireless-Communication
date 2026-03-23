@@ -15,5 +15,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(moteus)
 
-add_executable(send send.cpp)
-target_link_libraries(send PRIVATE moteus::cpp)
+find_package(nlohmann_json REQUIRED)
+
+add_executable(client client.cpp)
+target_link_libraries(client PRIVATE moteus::cpp)
+target_link_libraries(client PRIVATE nlohmann_json::nlohmann_json)
