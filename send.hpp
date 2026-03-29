@@ -3,20 +3,23 @@
 #include <limits>
 #include <chrono>
 #include <thread>
+#include <tuple>
 #include "moteus.h"
 
 namespace moteus = mjbots::moteus;
 
-double get_position(moteus::Controller c) {
+std::tuple<double, double> get_pv(moteus::Controller c) {
 	try {
 
 		moteus::PositionMode::Command cmd;
 		cmd.position = std::numeric_limits<double>::quiet_NaN();
 		
 		const auto res = c.SetPosition(cmd);
-		
+
 		if (res) {
-			return res->values.position;
+			std::tuple<double, double> rv{
+				res->values.position, res->values.velocity};
+			return rv; 
 		} else {
 			c.SetStop();
 			std::cerr << "failed to get position" << std::endl;
@@ -27,7 +30,6 @@ double get_position(moteus::Controller c) {
 		std::cerr << "moteus error: " << e.what() << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
-
 }
 
 void move_slowly(moteus::Controller c, double c_pos, double t_pos) {
