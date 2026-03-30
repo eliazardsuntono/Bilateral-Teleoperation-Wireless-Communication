@@ -1,6 +1,5 @@
 # Bilateral-Teleoperation-Wireless-Communication
 
----------------------
 ## Before running code you need the following dependencies:
 1. CMake
 2. mjbots/moteus C++ library
