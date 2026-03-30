@@ -1,5 +1,4 @@
 # Bilateral-Teleoperation-Wireless-Communication
-Repo for J&amp;J Competition primarily for communication aspects between arms.
 
 ---------------------
 ## Before running code you need the following dependencies:
